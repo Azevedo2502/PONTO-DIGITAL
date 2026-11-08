@@ -1,3 +1,5 @@
+import os
+import re
 import secrets
 from datetime import datetime
 
@@ -34,6 +36,38 @@ def preparar_banco():
             )
         if "senha_alterada_em" not in colunas:
             conn.execute("ALTER TABLE admins ADD COLUMN senha_alterada_em TEXT")
+
+
+def criar_admin_inicial_se_necessario():
+    """Cria o primeiro administrador a partir do ambiente, se configurado."""
+    with conectar() as conn:
+        conn.execute("BEGIN IMMEDIATE")
+        total = conn.execute("SELECT COUNT(*) AS n FROM admins").fetchone()["n"]
+        if total:
+            return False
+
+        usuario = os.environ.get("ADMIN_INICIAL_USUARIO", "").strip()
+        senha = os.environ.get("ADMIN_INICIAL_SENHA", "")
+        if not usuario and not senha:
+            return False
+        if not usuario or not senha:
+            raise RuntimeError(
+                "Defina ADMIN_INICIAL_USUARIO e ADMIN_INICIAL_SENHA juntos."
+            )
+        if not re.fullmatch(r"[A-Za-z0-9._-]{3,30}", usuario):
+            raise RuntimeError(
+                "ADMIN_INICIAL_USUARIO deve ter de 3 a 30 caracteres: "
+                "letras, números, ponto, hífen ou sublinhado."
+            )
+        if len(senha) < 8:
+            raise RuntimeError("ADMIN_INICIAL_SENHA deve ter pelo menos 8 caracteres.")
+
+        conn.execute(
+            "INSERT INTO admins (usuario, senha_hash, precisa_trocar_senha) "
+            "VALUES (?, ?, 1)",
+            (usuario, generate_password_hash(senha)),
+        )
+    return True
 
 
 # ---------- Auditoria ----------

@@ -16,7 +16,8 @@ from werkzeug.middleware.proxy_fix import ProxyFix
 from werkzeug.utils import secure_filename
 
 from calculo import calcular_dia, formatar, momento_do_dia
-from contas import (preparar_banco, registrar_auditoria, listar_auditoria,
+from contas import (preparar_banco, criar_admin_inicial_se_necessario,
+                    registrar_auditoria, listar_auditoria,
                     listar_admins, buscar_admin, gerar_senha_temporaria,
                     criar_admin_com_senha_temporaria, redefinir_senha_de,
                     trocar_propria_senha, remover_admin, redefinir_codigo)
@@ -76,6 +77,7 @@ if quantidade_proxies:
     )
 criar_tabelas()
 preparar_banco()
+criar_admin_inicial_se_necessario()
 
 NOMES_DIAS = ["Segunda-feira", "Terça-feira", "Quarta-feira", "Quinta-feira",
               "Sexta-feira", "Sábado", "Domingo"]

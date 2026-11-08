@@ -6,6 +6,7 @@ from datetime import datetime, timedelta
 from io import BytesIO
 from pathlib import Path
 from contextlib import closing
+from unittest.mock import patch
 
 TEST_DATA = tempfile.TemporaryDirectory(prefix="ponto-testes-")
 os.environ["PONTO_DB_PATH"] = str(Path(TEST_DATA.name) / "teste.sqlite")
@@ -13,7 +14,7 @@ os.environ["APP_ENV"] = "development"
 
 import app as modulo_app
 import db
-from contas import preparar_banco
+from contas import criar_admin_inicial_se_necessario, preparar_banco
 from openpyxl import load_workbook
 
 
@@ -44,6 +45,53 @@ class RecursosNovosTests(unittest.TestCase):
             follow_redirects=True,
         )
         self.assertEqual(resposta.status_code, 200)
+
+    def test_cria_admin_inicial_e_exige_troca_de_senha(self):
+        with db.conectar() as conn:
+            conn.execute("DELETE FROM admins")
+
+        with patch.dict(os.environ, {
+            "ADMIN_INICIAL_USUARIO": "admin-inicial",
+            "ADMIN_INICIAL_SENHA": "senha-inicial-segura",
+        }):
+            self.assertTrue(criar_admin_inicial_se_necessario())
+            self.assertFalse(criar_admin_inicial_se_necessario())
+
+        admin = db.verificar_admin("admin-inicial", "senha-inicial-segura")
+        self.assertIsNotNone(admin)
+        self.assertEqual(admin["precisa_trocar_senha"], 1)
+        with modulo_app.app.test_client() as cliente:
+            resposta = cliente.post(
+                "/admin/login",
+                data={"usuario": "admin-inicial", "senha": "senha-inicial-segura"},
+                follow_redirects=True,
+            )
+        self.assertEqual(resposta.request.path, "/admin/senha")
+
+    def test_admin_inicial_nao_substitui_admin_existente(self):
+        with patch.dict(os.environ, {
+            "ADMIN_INICIAL_USUARIO": "outro-admin",
+            "ADMIN_INICIAL_SENHA": "senha-inicial-segura",
+        }):
+            self.assertFalse(criar_admin_inicial_se_necessario())
+
+        with db.conectar() as conn:
+            admins = conn.execute("SELECT usuario FROM admins").fetchall()
+        self.assertEqual([admin["usuario"] for admin in admins], ["admin-teste"])
+
+    def test_admin_inicial_rejeita_senha_curta(self):
+        with db.conectar() as conn:
+            conn.execute("DELETE FROM admins")
+
+        with patch.dict(os.environ, {
+            "ADMIN_INICIAL_USUARIO": "admin-inicial",
+            "ADMIN_INICIAL_SENHA": "curta",
+        }), self.assertRaisesRegex(RuntimeError, "pelo menos 8 caracteres"):
+            criar_admin_inicial_se_necessario()
+
+        with db.conectar() as conn:
+            total = conn.execute("SELECT COUNT(*) AS n FROM admins").fetchone()["n"]
+        self.assertEqual(total, 0)
 
     def test_adiciona_batida_sem_apagar_historico(self):
         agora = datetime.now()

@@ -40,6 +40,14 @@ O projeto usa SQLite. Na Railway, crie um volume persistente montado em `/data` 
 | `TRUST_PROXY_COUNT` | `1` |
 | `PUBLIC_ORIGIN` | origem HTTPS do serviço, por exemplo `https://seu-dominio.up.railway.app` |
 | `LEGACY_CODIGO_SECRET_KEY` | temporário, somente durante a migração de códigos existentes |
+| `ADMIN_INICIAL_USUARIO` | temporário, usuário do primeiro admin (3 a 30 caracteres) |
+| `ADMIN_INICIAL_SENHA` | temporário, senha do primeiro admin (mínimo de 8 caracteres) |
+
+As duas variáveis `ADMIN_INICIAL_*` são opcionais e só criam o administrador se
+a tabela ainda estiver vazia. A senha inicial exige troca no primeiro acesso.
+Depois de entrar e definir uma senha permanente, remova essas duas variáveis
+temporárias da Railway. Mantenha `SECRET_KEY`, `CODIGO_SECRET_KEY` e
+`PONTO_DB_PATH` configuradas.
 
 O `Procfile` inicia Gunicorn com um worker e a porta fornecida pela plataforma. A Railway termina HTTPS na sua borda; o app redireciona tráfego HTTP para HTTPS. Use o domínio HTTPS do serviço ou configure um domínio próprio antes de instalar o app no iPad. O cookie da sessão só é enviado por HTTPS em produção.
 
