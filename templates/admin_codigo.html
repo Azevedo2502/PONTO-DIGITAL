@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Admin - Redefinir código</title>
+  <style>
+    body { font-family: sans-serif; max-width: 420px; margin: 50px auto; padding: 0 16px; }
+    input, button { width: 100%; padding: 12px; margin: 6px 0; font-size: 1rem; box-sizing: border-box; }
+    .aviso { background: #ffffcc; padding: 8px; margin: 8px 0; }
+    .pequeno { font-size: 0.85rem; color: #555; }
+  </style>
+</head>
+<body>
+  <p style="text-align: right">
+    <a href="{{ url_for('admin_funcionarios') }}">Voltar</a> |
+    <a href="{{ url_for('admin_sair') }}">Sair</a>
+  </p>
+  <h1>Redefinir código</h1>
+  <p>Funcionário: <strong>{{ funcionario.nome }}</strong></p>
+
+  {% for m in get_flashed_messages() %}
+    <div class="aviso">{{ m }}</div>
+  {% endfor %}
+
+  <form method="post">
+    <input name="codigo" placeholder="Novo código (4 a 8 números)" inputmode="numeric"
+           pattern="[0-9]{4,8}" required autofocus autocomplete="off">
+    <button type="submit">Salvar novo código</button>
+  </form>
+  <p class="pequeno">O código antigo deixa de funcionar na hora. Entregue o novo em mãos
+     e oriente a pessoa a não repassá-lo.</p>
+</body>
+</html>

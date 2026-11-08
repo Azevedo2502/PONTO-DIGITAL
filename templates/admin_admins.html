@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#111214">
+  <title>Administradores | Ponto STAR</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='admin.css') }}">
+</head>
+<body>
+  <header class="admin-header">
+    <a class="admin-brand" href="{{ url_for('admin_funcionarios') }}" aria-label="Ponto STAR — Funcionários">
+      <img src="{{ url_for('static', filename='img/logo-star.png') }}" alt="STAR Serviços Automotivos">
+    </a>
+    <nav class="admin-nav" aria-label="Navegação do administrador">
+      <a href="{{ url_for('admin_funcionarios') }}">Funcionários</a>
+      <a href="{{ url_for('admin_configuracoes') }}">Configurações</a>
+      <a href="{{ url_for('admin_administradores') }}" aria-current="page">Administradores</a>
+      <a href="{{ url_for('admin_backup') }}">Backup</a>
+      <a href="{{ url_for('admin_trocar_senha') }}">Minha senha</a>
+      <a href="{{ url_for('admin_sair') }}">Sair</a>
+    </nav>
+  </header>
+
+  <main>
+    <h1>Administradores</h1>
+    <p class="subtitulo">Gerencie os acessos ao painel e acompanhe as atividades recentes.</p>
+
+    {% for m in get_flashed_messages() %}
+      <div class="aviso" role="status">{{ m }}</div>
+    {% endfor %}
+
+    {% if temporaria %}
+    <section class="cartao segredo">
+      <h2>Senha temporária de {{ usuario_temp }}</h2>
+      <p><code>{{ temporaria }}</code></p>
+      <p>Anote e entregue em mãos. Ela será exibida uma única vez e precisará ser trocada no primeiro acesso.</p>
+    </section>
+    {% endif %}
+
+    <section class="cartao espacamento-topo">
+      <h2>Novo administrador</h2>
+      <form class="linha-form" method="post" action="{{ url_for('admin_novo_admin') }}">
+        <label class="campo">Nome de usuário
+          <input name="usuario" minlength="3" maxlength="30" placeholder="3 a 30 caracteres" required>
+        </label>
+        <button type="submit">Criar administrador</button>
+      </form>
+      <p class="pequeno texto-suave">O sistema gera uma senha temporária que será mostrada uma única vez.</p>
+    </section>
+
+    <section class="cartao espacamento-topo">
+      <h2>Contas cadastradas</h2>
+      <div class="tabela-rolavel">
+        <table>
+          <thead>
+            <tr><th>Usuário</th><th>Situação</th><th>Última troca de senha</th><th>Ações</th></tr>
+          </thead>
+          <tbody>
+            {% for a in admins %}
+            <tr>
+              <td>{{ a.usuario }}{% if a.id == atual %} <span class="texto-suave">(você)</span>{% endif %}</td>
+              <td>{{ 'Precisa trocar a senha' if a.precisa_trocar_senha else 'Ativo' }}</td>
+              <td>{{ a.senha_alterada_em or '—' }}</td>
+              <td>
+                {% if a.id != atual %}
+                <div class="lista-acoes">
+                  <form method="post" action="{{ url_for('admin_redefinir_admin', admin_id=a.id) }}"
+                        onsubmit="return confirm('Gerar uma nova senha temporária para este administrador?')">
+                    <button class="botao-secundario" type="submit">Redefinir senha</button>
+                  </form>
+                  <form method="post" action="{{ url_for('admin_remover_admin', admin_id=a.id) }}"
+                        onsubmit="return confirm('Remover este administrador?')">
+                    <button class="botao-perigo" type="submit">Remover</button>
+                  </form>
+                </div>
+                {% else %}
+                <span class="texto-suave">Conta atual</span>
+                {% endif %}
+              </td>
+            </tr>
+            {% else %}
+            <tr><td class="vazio" colspan="4">Nenhuma conta cadastrada.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="cartao espacamento-topo">
+      <h2>Atividades recentes</h2>
+      <div class="tabela-rolavel">
+        <table>
+          <thead><tr><th>Quando</th><th>Quem</th><th>Atividade</th></tr></thead>
+          <tbody>
+            {% for r in atividades %}
+            <tr>
+              <td>{{ r.quando[8:10] }}/{{ r.quando[5:7] }}/{{ r.quando[:4] }} {{ r.quando[11:16] }}</td>
+              <td>{{ r.admin_usuario }}</td>
+              <td>{{ r.acao }}{% if r.detalhe %}: {{ r.detalhe }}{% endif %}</td>
+            </tr>
+            {% else %}
+            <tr><td class="vazio" colspan="3">Nenhuma atividade registrada.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+</body>
+</html>

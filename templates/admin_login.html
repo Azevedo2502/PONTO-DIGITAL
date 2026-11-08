@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#111214">
+  <title>Entrar | Painel STAR</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='admin.css') }}">
+  <style>
+    .login-pagina {
+      display: grid;
+      min-height: calc(100vh - 76px);
+      place-items: center;
+    }
+    .login-cartao { width: min(440px, 100%); padding: 28px; }
+    .login-logo { display: block; width: min(190px, 70%); height: auto; margin: 0 auto 24px; mix-blend-mode: screen; }
+    .login-cartao h1 { margin: 0; text-align: center; }
+    .login-cartao .subtitulo { margin: 8px 0 24px; text-align: center; }
+    .login-cartao button { width: 100%; margin-top: 6px; }
+    .login-cartao .aviso { margin-bottom: 14px; }
+    @media (max-width: 760px) {
+      .login-pagina { min-height: calc(100vh - 60px); }
+      .login-cartao { padding: 22px; }
+    }
+  </style>
+</head>
+<body>
+  <main class="login-pagina">
+    <section class="cartao login-cartao" aria-labelledby="titulo-login">
+      <img class="login-logo" src="{{ url_for('static', filename='img/logo-star.png') }}" alt="STAR Serviços Automotivos">
+      <h1 id="titulo-login">Painel do administrador</h1>
+      <p class="subtitulo">Entre com seu usuário e senha para continuar.</p>
+
+      {% for m in get_flashed_messages() %}
+        <div class="aviso aviso-erro" role="alert">{{ m }}</div>
+      {% endfor %}
+
+      <form class="grupo-form" method="post">
+        <label class="campo" for="usuario">Usuário
+          <input id="usuario" name="usuario" placeholder="Seu usuário" required autofocus autocomplete="username">
+        </label>
+        <label class="campo" for="senha">Senha
+          <input id="senha" name="senha" type="password" placeholder="Sua senha" required autocomplete="current-password">
+        </label>
+        <button type="submit">Entrar</button>
+      </form>
+    </section>
+  </main>
+</body>
+</html>

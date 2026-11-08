@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#111214">
+  <title>Configurações | Ponto STAR</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='admin.css') }}">
+</head>
+<body>
+  <header class="admin-header">
+    <a class="admin-brand" href="{{ url_for('admin_funcionarios') }}" aria-label="Ponto STAR — Funcionários">
+      <img src="{{ url_for('static', filename='img/logo-star.png') }}" alt="STAR Serviços Automotivos">
+    </a>
+    <nav class="admin-nav" aria-label="Navegação do administrador">
+      <a href="{{ url_for('admin_funcionarios') }}">Funcionários</a>
+      <a href="{{ url_for('admin_configuracoes') }}" aria-current="page">Configurações</a>
+      <a href="{{ url_for('admin_administradores') }}">Administradores</a>
+      <a href="{{ url_for('admin_backup') }}">Backup</a>
+      <a href="{{ url_for('admin_trocar_senha') }}">Minha senha</a>
+      <a href="{{ url_for('admin_sair') }}">Sair</a>
+    </nav>
+  </header>
+
+  <main>
+    <h1>Configurações</h1>
+    <p class="subtitulo">Jornada de trabalho, regras de cálculo e dias de folga.</p>
+
+    {% for m in get_flashed_messages() %}
+      <div class="aviso" role="status">{{ m }}</div>
+    {% endfor %}
+
+    <div class="grade-configuracoes">
+      <section class="cartao cartao-largo">
+        <h2>Jornada semanal</h2>
+        <p>Defina os horários previstos para cada dia. Desmarque os dias sem expediente.</p>
+        <form class="grupo-form" method="post" action="{{ url_for('admin_salvar_jornada') }}">
+          {% for dia in jornada %}
+          <div class="dia-jornada">
+            <label class="checkbox-campo">
+              <input type="checkbox" name="trabalha_{{ dia.dia_semana }}" value="on"
+                     {% if dia.trabalha %}checked{% endif %}>
+              {{ nomes_dias[dia.dia_semana] }}
+            </label>
+            <label class="campo">Entrada
+              <input type="time" name="entrada_{{ dia.dia_semana }}" value="{{ dia.entrada or '' }}">
+            </label>
+            <label class="campo">Saída
+              <input type="time" name="saida_{{ dia.dia_semana }}" value="{{ dia.saida or '' }}">
+            </label>
+            <label class="campo">Almoço (min)
+              <input type="number" name="almoco_{{ dia.dia_semana }}" value="{{ dia.almoco_min }}"
+                     min="0" max="240" step="1">
+            </label>
+          </div>
+          {% endfor %}
+          <div>
+            <button type="submit">Salvar jornada</button>
+          </div>
+        </form>
+      </section>
+
+      <section class="cartao">
+        <h2>Tolerâncias e limite</h2>
+        <form class="grupo-form" method="post" action="{{ url_for('admin_salvar_regras') }}">
+          <label class="campo">Tolerância de entrada (min)
+            <input type="number" name="tol_entrada" value="{{ regras.tol_entrada }}" min="0" max="30" required>
+          </label>
+          <label class="campo">Tolerância do almoço (min)
+            <input type="number" name="tol_almoco" value="{{ regras.tol_almoco }}" min="0" max="30" required>
+          </label>
+          <label class="campo">Tolerância de saída (min)
+            <input type="number" name="tol_saida" value="{{ regras.tol_saida }}" min="0" max="30" required>
+          </label>
+          <label class="campo">Horário limite para bater a saída
+            <input type="time" name="hora_limite" value="{{ regras.hora_limite }}" required>
+          </label>
+          <button type="submit">Salvar regras</button>
+        </form>
+        <p>Dentro da tolerância não há desconto nem hora extra. Depois do limite, um dia incompleto fica pendente e não gera saldo negativo.</p>
+      </section>
+
+      <section class="cartao">
+        <h2>Feriados e folgas</h2>
+        <form class="form-feriado" method="post" action="{{ url_for('admin_novo_feriado') }}">
+          <label class="campo">Data
+            <input type="date" name="data" required>
+          </label>
+          <label class="campo">Descrição
+            <input name="descricao" maxlength="120" placeholder="Ex.: Feriado municipal" required>
+          </label>
+          <button type="submit">Adicionar</button>
+        </form>
+        <div class="tabela-rolavel">
+          <table>
+            <thead><tr><th>Data</th><th>Descrição</th><th>Ação</th></tr></thead>
+            <tbody>
+              {% for feriado in feriados %}
+              <tr>
+                <td>{{ feriado.data[8:10] }}/{{ feriado.data[5:7] }}/{{ feriado.data[:4] }}</td>
+                <td>{{ feriado.descricao }}</td>
+                <td>
+                  <form method="post" action="{{ url_for('admin_remover_feriado') }}">
+                    <input type="hidden" name="data" value="{{ feriado.data }}">
+                    <button class="botao-secundario" type="submit">Remover</button>
+                  </form>
+                </td>
+              </tr>
+              {% else %}
+              <tr><td class="vazio" colspan="3">Nenhum feriado ou folga cadastrado.</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </div>
+  </main>
+</body>
+</html>

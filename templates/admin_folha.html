@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#111214">
+  <title>Folha de {{ funcionario.nome }} | Ponto STAR</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='admin.css') }}">
+</head>
+<body>
+  <header class="admin-header">
+    <a class="admin-brand" href="{{ url_for('admin_funcionarios') }}" aria-label="Ponto STAR — Funcionários">
+      <img src="{{ url_for('static', filename='img/logo-star.png') }}" alt="STAR Serviços Automotivos">
+    </a>
+    <nav class="admin-nav" aria-label="Navegação do administrador">
+      <a href="{{ url_for('admin_funcionarios') }}" aria-current="page">Funcionários</a>
+      <a href="{{ url_for('admin_configuracoes') }}">Configurações</a>
+      <a href="{{ url_for('admin_administradores') }}">Administradores</a>
+      <a href="{{ url_for('admin_backup') }}">Backup</a>
+      <a href="{{ url_for('admin_trocar_senha') }}">Trocar senha</a>
+      <a href="{{ url_for('admin_sair') }}">Sair</a>
+    </nav>
+  </header>
+
+  <main>
+    {% for m in get_flashed_messages() %}
+      <div class="aviso espacamento-topo" role="status">{{ m }}</div>
+    {% endfor %}
+
+    <h1>{{ funcionario.nome }}{% if not funcionario.ativo %} <span class="texto-suave">(arquivado)</span>{% endif %}</h1>
+    <p class="subtitulo">Folha de ponto e banco de horas.</p>
+
+    <section class="folha-navegacao cartao" aria-label="Navegação entre meses">
+      <a class="botao botao-secundario" href="{{ url_for('admin_folha', funcionario_id=funcionario.id, mes=mes_anterior) }}">&larr; Mês anterior</a>
+      <h2>{{ titulo_mes }}</h2>
+      {% if tem_proximo %}
+        <a class="botao botao-secundario" href="{{ url_for('admin_folha', funcionario_id=funcionario.id, mes=mes_proximo) }}">Próximo mês &rarr;</a>
+      {% endif %}
+    </section>
+
+    <section class="folha-resumo" aria-label="Resumo do mês">
+      <div class="cartao">Dias trabalhados<b>{{ resumo.dias_trabalhados }}</b></div>
+      <div class="cartao">Faltas<b>{{ resumo.faltas }}</b></div>
+      <div class="cartao">Sem ponto de saída<b>{{ resumo.pendentes }}</b></div>
+      <div class="cartao">Dias com atraso<b>{{ resumo.dias_com_atraso }}</b></div>
+      <div class="cartao">Saldo positivo<b class="saldo-positivo">{{ resumo.positivo }}</b></div>
+      <div class="cartao">Saldo negativo<b class="saldo-negativo">{{ resumo.negativo }}</b></div>
+      <div class="cartao">Saldo do mês<b>{{ resumo.saldo_mes }}</b></div>
+      <div class="cartao">Saldo anterior<b>{{ resumo.anterior }}</b></div>
+      <div class="cartao cartao-destaque">Saldo final (banco de horas)<b>{{ resumo.final }}</b></div>
+    </section>
+
+    <div class="folha-acoes">
+      <a class="botao" href="{{ url_for('admin_exportar_folha_pdf', funcionario_id=funcionario.id, mes=request.args.get('mes')) }}">Baixar PDF</a>
+      <a class="botao botao-secundario" href="{{ url_for('admin_exportar_folha_excel', funcionario_id=funcionario.id, mes=request.args.get('mes')) }}">Baixar Excel</a>
+    </div>
+    <p class="nota">Faltas e dias sem ponto de saída não entram no saldo do banco de horas.</p>
+
+    <section class="cartao arquivamento espacamento-topo">
+      {% if funcionario.ativo %}
+        <h2>Arquivar funcionário</h2>
+        <p>O funcionário deixará de poder registrar ponto. As batidas e a folha serão preservadas.</p>
+        <form method="post" action="{{ url_for('admin_arquivar_funcionario', funcionario_id=funcionario.id) }}"
+              onsubmit="return confirm('Arquivar este funcionário? O histórico de ponto será preservado.');">
+          <input type="hidden" name="mes" value="{{ request.args.get('mes', '') }}">
+          <button class="botao-secundario" type="submit">Arquivar funcionário</button>
+        </form>
+      {% else %}
+        <h2>Funcionário arquivado</h2>
+        <p>O histórico de ponto está preservado. Para reativar, use a lista de funcionários.</p>
+      {% endif %}
+    </section>
+
+    {% if linhas %}
+      <section class="cartao espacamento-topo">
+        <h2>Registros do mês</h2>
+        <div class="tabela-rolavel folha-tabela-rolavel">
+          <table class="folha-tabela">
+            <thead>
+              <tr>
+                <th>Data</th><th>Dia</th><th>Entrada</th><th>Saída almoço</th>
+                <th>Volta</th><th>Saída</th><th>Trabalhado</th><th>Saldo</th><th>Situação</th><th>Ajuste</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for l in linhas %}
+              <tr class="s-{{ l.situacao }}">
+                <td>{{ l.data }}</td>
+                <td>{{ l.dia }}</td>
+                {% for c in l.colunas %}<td>{{ c or '—' }}</td>{% endfor %}
+                <td>{{ l.trabalhado }}</td>
+                <td class="saldo">{{ l.saldo }}</td>
+                <td>{{ l.texto }}
+                  {% for a in l.alertas %}<span class="alerta">{{ a }}</span>{% endfor %}
+                </td>
+                <td class="ajuste">
+                  {% if l.pode_ajustar and l.tipos_faltantes %}
+                    <details>
+                      <summary>Adicionar batida esquecida</summary>
+                      <form class="ajuste-form" method="post" action="{{ url_for('admin_adicionar_batida', funcionario_id=funcionario.id) }}">
+                        <input type="hidden" name="data" value="{{ l.data_iso }}">
+                        <label class="campo">Tipo
+                          <select name="tipo" required>
+                            {% for batida in l.tipos_faltantes %}
+                            <option value="{{ batida.tipo }}">{{ batida.rotulo }}</option>
+                            {% endfor %}
+                          </select>
+                        </label>
+                        <label class="campo">Horário <input type="time" name="hora" required></label>
+                        <label class="campo">Motivo <input name="motivo" maxlength="500" required></label>
+                        <button type="submit">Registrar sem apagar histórico</button>
+                      </form>
+                    </details>
+                  {% elif l.pode_ajustar %}
+                    Completo
+                  {% else %}
+                    —
+                  {% endif %}
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </section>
+    {% else %}
+      <p class="vazio cartao espacamento-topo">Nenhum dia para mostrar neste mês (ele ainda não começou, ou o funcionário foi cadastrado depois).</p>
+    {% endif %}
+  </main>
+</body>
+</html>
